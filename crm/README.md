@@ -1,14 +1,14 @@
 # CRM Vendas
 
 CRM standalone de **Contatos** e **Pipeline de negócios** (funil Kanban), com login simples.
-App único em Next.js (React + rotas de API) sobre SQLite via Prisma. Sem serviço externo.
+App único em Next.js (React + rotas de API) sobre PostgreSQL via Prisma.
 
 > Projeto independente. **Não** faz parte do MINIMUS.
 
 ## Stack
 
-- **Next.js 14** (App Router, TypeScript)
-- **Prisma + SQLite** (banco em arquivo, `prisma/dev.db`)
+- **Next.js 14** (App Router, TypeScript, saída `standalone`)
+- **Prisma + PostgreSQL**
 - **Auth**: e-mail + senha, sessão em cookie JWT (`jose`), senha com `bcryptjs`
 - Validação com `zod`
 
@@ -23,16 +23,20 @@ App único em Next.js (React + rotas de API) sobre SQLite via Prisma. Sem servi�
 
 ## Como rodar
 
+Precisa de um PostgreSQL. Suba um rápido com o Compose do repo (`docker compose up -d db`)
+ou use um Postgres local/gerenciado. Depois:
+
 ```bash
 cd crm
-npm install                 # instala deps e gera o Prisma Client
-npx prisma migrate dev      # cria o banco SQLite e as tabelas
-npm run db:seed             # (opcional) dados de exemplo — login demo@crm.local / demo1234
-npm run dev                 # http://localhost:3000
+cp .env.example .env         # ajuste DATABASE_URL e gere AUTH_SECRET (openssl rand -hex 32)
+npm install                  # instala deps e gera o Prisma Client
+npx prisma migrate deploy    # aplica as migrations no Postgres
+npm run db:seed              # (opcional) dados de exemplo — login demo@crm.local / demo1234
+npm run dev                  # http://localhost:3000
 ```
 
-O arquivo `.env` já traz `DATABASE_URL` (SQLite local) e um `AUTH_SECRET` gerado.
-Veja `.env.example` para os valores esperados. **Não** versione o `.env` real.
+`DATABASE_URL` aponta para o Postgres (ex.: `postgresql://crm:crm@localhost:5432/crm?schema=public`)
+e `AUTH_SECRET` é o segredo da sessão. Veja `.env.example`. **Não** versione o `.env` real.
 
 ## Estrutura
 
@@ -53,9 +57,12 @@ prisma/schema.prisma        # User, Contact, Deal, Task
 
 ## Deploy / produção
 
-Local usa **SQLite** (zero config). Para produção, use **PostgreSQL** — veja
-**[DEPLOY.md](./DEPLOY.md)** (Vercel + Postgres, ou Docker/Compose). O repo já
-traz `Dockerfile`, `.dockerignore` e `docker-compose.yml` (app + Postgres).
+PostgreSQL em dev e produção. Veja **[DEPLOY.md](./DEPLOY.md)** (Vercel + Postgres,
+ou Docker/Compose). O repo traz `Dockerfile`, `.dockerignore` e `docker-compose.yml`
+(app + Postgres); o entrypoint roda `prisma migrate deploy` no start.
+
+Validado de verdade em Postgres 16: `migrate deploy` aplica as migrations numa base
+limpa, seed popula os dados, e o app serve com cadastro/login e CRUD isolado por usuário.
 
 ## Próximos passos
 

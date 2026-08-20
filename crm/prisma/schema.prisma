@@ -1,12 +1,12 @@
-// CRM — schema Prisma (SQLite)
-// v1: Contatos + Pipeline de negócios + login simples.
+// CRM — schema Prisma (PostgreSQL)
+// Contatos + Pipeline de negócios + Tarefas + login simples.
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 

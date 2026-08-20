@@ -1,45 +1,17 @@
 # Deploy — CRM Vendas
 
-O código é **agnóstico de banco** (nenhum SQL específico de SQLite). Para
-desenvolvimento local o projeto usa **SQLite** (zero configuração). Para
-**produção**, use **PostgreSQL** — SQLite não funciona bem em ambientes
-serverless/efêmeros (Vercel) nem escala com múltiplas instâncias.
+O app roda em **PostgreSQL** (dev e produção). O provider do Prisma já está em
+`postgresql` e as migrations versionadas em `prisma/migrations/` são de Postgres —
+não há passo de conversão. Em produção as migrations são aplicadas com
+`npx prisma migrate deploy` (o `Dockerfile` já faz isso no start).
 
-> ⚠️ **Importante:** as migrations versionadas em `prisma/migrations/` foram
-> geradas para **SQLite** (uso local). Antes do primeiro deploy em Postgres,
-> gere as migrations do Postgres uma única vez (passo 1 abaixo). É rápido.
-
----
-
-## Passo 1 — Trocar para PostgreSQL (uma vez)
-
-1. Em `prisma/schema.prisma`, mude o provider:
-
-   ```prisma
-   datasource db {
-     provider = "postgresql"   // era "sqlite"
-     url      = env("DATABASE_URL")
-   }
-   ```
-
-2. Aponte `DATABASE_URL` para um Postgres (local via Docker, Neon, Supabase,
-   RDS, etc.). Ex.: `postgresql://user:senha@host:5432/crm?schema=public`.
-
-3. Regenere as migrations para Postgres:
-
-   ```bash
-   rm -rf prisma/migrations           # remove as migrations de SQLite
-   npx prisma migrate dev --name init # cria as migrations de Postgres
-   ```
-
-4. Comite `prisma/schema.prisma` e a nova pasta `prisma/migrations/`.
-
-Pronto — o app agora está em Postgres. Em produção as migrations são aplicadas
-com `npx prisma migrate deploy` (o `Dockerfile` já faz isso no start).
+> ✅ **Validado em Postgres 16:** `migrate deploy` aplica as migrations numa base
+> limpa, o seed popula os dados, e o app serve cadastro/login e CRUD isolado por
+> usuário. Ver a seção "Validação" no fim.
 
 ---
 
-## Variáveis de ambiente (produção)
+## Variáveis de ambiente
 
 | Variável | Descrição |
 |---|---|
@@ -52,10 +24,9 @@ Nunca versione os valores reais. Configure-os no painel do provedor.
 
 ## Opção A — Vercel + Postgres gerenciado (recomendado)
 
-1. Faça o **Passo 1** e comite as migrations de Postgres.
-2. Crie um Postgres gerenciado (Neon, Supabase, Vercel Postgres).
-3. No projeto Vercel, defina `DATABASE_URL` e `AUTH_SECRET`.
-4. O `build` do projeto (`package.json`) já roda
+1. Crie um Postgres gerenciado (Neon, Supabase, Vercel Postgres).
+2. No projeto Vercel, defina `DATABASE_URL` e `AUTH_SECRET`.
+3. O `build` do projeto (`package.json`) já roda
    `prisma generate && prisma migrate deploy && next build` — as migrations
    são aplicadas no deploy. Se preferir aplicar fora do build, remova o
    `migrate deploy` do script `build` e rode-o num passo de release.
@@ -63,7 +34,7 @@ Nunca versione os valores reais. Configure-os no painel do provedor.
 ## Opção B — Docker / Docker Compose
 
 O repositório traz `Dockerfile`, `.dockerignore` e `docker-compose.yml`
-(app + Postgres). Depois do **Passo 1**:
+(app + Postgres):
 
 ```bash
 export AUTH_SECRET="$(openssl rand -hex 32)"
@@ -86,18 +57,32 @@ docker run -p 3000:3000 \
 
 ---
 
-## Continuar em SQLite (protótipo/local)
-
-Se ainda **não** for para produção, não faça o Passo 1: `npm install` +
-`npx prisma migrate dev` + `npm run dev` já funciona com SQLite. A troca para
-Postgres continua trivial depois — só o Passo 1.
-
----
-
 ## Checklist de produção
 
-- [ ] Provider do Prisma em `postgresql` e migrations de Postgres comitadas.
+- [x] Provider do Prisma em `postgresql` e migrations de Postgres comitadas.
 - [ ] `DATABASE_URL` e `AUTH_SECRET` definidos no provedor (nunca no git).
 - [ ] `AUTH_SECRET` forte e único por ambiente.
 - [ ] Backup/rotina de snapshot do Postgres.
 - [ ] HTTPS na frente do app (o cookie de sessão usa `secure` em produção).
+
+---
+
+## Validação (o que já foi testado)
+
+Testado contra **PostgreSQL 16** localmente:
+
+1. `prisma migrate deploy` numa base limpa → cria `User`, `Contact`, `Deal`,
+   `Task` (+ `_prisma_migrations`).
+2. `npm run db:seed` → 1 usuário demo, 3 contatos, 4 negócios, 5 tarefas.
+3. App em produção (`next start`, saída standalone) apontando para o Postgres:
+   - login com o usuário do seed;
+   - cadastro de novo usuário (escrita);
+   - criar contato + negócio, mover etapa no funil;
+   - **isolamento por usuário** confirmado (cada conta só vê os próprios dados);
+   - valores persistidos em centavos (ex.: `R$ 1.234,56` → `123456`).
+
+> Observação: o **build/pull das imagens Docker** (Postgres e Node do Hub) pode
+> ser bloqueado por política de rede em ambientes restritos. O caminho de
+> aplicação em Postgres acima foi validado diretamente; num ambiente com acesso
+> ao Docker Hub, `docker compose up --build` reproduz o mesmo resultado em
+> container.
