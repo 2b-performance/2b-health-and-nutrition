@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 const links = [
   { href: "/pipeline", label: "Pipeline" },
   { href: "/contatos", label: "Contatos" },
+  { href: "/tarefas", label: "Tarefas" },
 ];
 
 export default function Sidebar({

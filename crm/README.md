@@ -12,11 +12,13 @@ App único em Next.js (React + rotas de API) sobre SQLite via Prisma. Sem servi�
 - **Auth**: e-mail + senha, sessão em cookie JWT (`jose`), senha com `bcryptjs`
 - Validação com `zod`
 
-## Escopo da v1
+## Escopo
 
 - **Contatos**: cadastro, busca, edição, exclusão e ficha com os negócios ligados.
 - **Pipeline**: funil Kanban com 5 etapas (Novo → Em contato → Proposta → Ganho / Perdido),
   arrastar-e-soltar entre colunas, valor total por etapa e no funil.
+- **Tarefas**: follow-ups com vencimento, agrupados em Atrasadas / Hoje / Próximas / Sem data,
+  concluir com um toque, e vínculo opcional a contato e/ou negócio.
 - **Login**: cadastro e entrada. Cada usuário vê apenas seus próprios dados.
 
 ## Como rodar
@@ -40,16 +42,23 @@ src/
     (app)/                  # área autenticada (sidebar + telas)
       pipeline/             # funil Kanban
       contatos/             # lista + ficha do contato
-    api/                    # rotas: auth, contacts, deals, deals/reorder
+      tarefas/              # follow-ups com vencimento
+    api/                    # rotas: auth, contacts, deals, deals/reorder, tasks
     login/  register/       # telas públicas
-  components/               # Sidebar, Board (Kanban), ContactsView
-  lib/                      # db (Prisma), auth, session (JWT), stages/moeda
+  components/               # Sidebar, Board (Kanban), ContactsView, TasksView
+  lib/                      # db (Prisma), auth, session (JWT), stages, date
   middleware.ts             # protege páginas e APIs
-prisma/schema.prisma        # User, Contact, Deal
+prisma/schema.prisma        # User, Contact, Deal, Task
 ```
 
-## Próximos passos (fora da v1)
+## Deploy / produção
 
-- Módulo de **Atividades/Tarefas** (follow-up com vencimento) e **Dashboard** de métricas.
-- Troca de SQLite por **Postgres** (só mudar o `datasource` do Prisma).
+Local usa **SQLite** (zero config). Para produção, use **PostgreSQL** — veja
+**[DEPLOY.md](./DEPLOY.md)** (Vercel + Postgres, ou Docker/Compose). O repo já
+traz `Dockerfile`, `.dockerignore` e `docker-compose.yml` (app + Postgres).
+
+## Próximos passos
+
+- **Dashboard** de métricas (funil, valor em aberto, ganhos no mês, conversão).
 - Papéis de usuário (admin/vendedor) e múltiplos workspaces.
+- Histórico/atividades no contato e importar/exportar contatos.

@@ -19,6 +19,7 @@ model User {
 
   contacts Contact[]
   deals    Deal[]
+  tasks    Task[]
 }
 
 model Contact {
@@ -35,6 +36,7 @@ model Contact {
   ownerId String
 
   deals Deal[]
+  tasks Task[]
 
   @@index([ownerId])
 }
@@ -57,7 +59,32 @@ model Deal {
   contact   Contact? @relation(fields: [contactId], references: [id], onDelete: SetNull)
   contactId String?
 
+  tasks Task[]
+
   @@index([ownerId])
   @@index([contactId])
   @@index([stage])
+}
+
+model Task {
+  id        String    @id @default(cuid())
+  title     String
+  done      Boolean   @default(false)
+  dueDate   DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  owner   User   @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  ownerId String
+
+  contact   Contact? @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  contactId String?
+
+  deal   Deal?   @relation(fields: [dealId], references: [id], onDelete: SetNull)
+  dealId String?
+
+  @@index([ownerId])
+  @@index([contactId])
+  @@index([dealId])
+  @@index([done])
 }
