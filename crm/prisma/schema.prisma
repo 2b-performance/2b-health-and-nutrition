@@ -1,0 +1,93 @@
+// CRM — schema Prisma (PostgreSQL)
+// Contatos + Pipeline de negócios + Tarefas + login simples.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+
+  contacts Contact[]
+  deals    Deal[]
+  tasks    Task[]
+}
+
+model Contact {
+  id        String   @id @default(cuid())
+  name      String
+  email     String?
+  phone     String?
+  company   String?
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  owner   User   @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  ownerId String
+
+  deals Deal[]
+  tasks Task[]
+
+  @@index([ownerId])
+}
+
+model Deal {
+  id        String   @id @default(cuid())
+  title     String
+  // valor em centavos, para evitar erros de ponto flutuante
+  valueCents Int     @default(0)
+  // etapa do funil: NOVO | CONTATO | PROPOSTA | GANHO | PERDIDO
+  stage     String   @default("NOVO")
+  // ordem dentro da coluna do Kanban
+  position  Int      @default(0)
+  // data em que o negócio foi fechado (entrou em GANHO ou PERDIDO); base do histórico
+  closedAt  DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  owner   User   @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  ownerId String
+
+  contact   Contact? @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  contactId String?
+
+  tasks Task[]
+
+  @@index([ownerId])
+  @@index([contactId])
+  @@index([stage])
+  @@index([closedAt])
+}
+
+model Task {
+  id        String    @id @default(cuid())
+  title     String
+  done      Boolean   @default(false)
+  dueDate   DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  owner   User   @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  ownerId String
+
+  contact   Contact? @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  contactId String?
+
+  deal   Deal?   @relation(fields: [dealId], references: [id], onDelete: SetNull)
+  dealId String?
+
+  @@index([ownerId])
+  @@index([contactId])
+  @@index([dealId])
+  @@index([done])
+}
