@@ -50,6 +50,8 @@ model Deal {
   stage     String   @default("NOVO")
   // ordem dentro da coluna do Kanban
   position  Int      @default(0)
+  // data em que o negócio foi fechado (entrou em GANHO ou PERDIDO); base do histórico
+  closedAt  DateTime?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -64,6 +66,7 @@ model Deal {
   @@index([ownerId])
   @@index([contactId])
   @@index([stage])
+  @@index([closedAt])
 }
 
 model Task {

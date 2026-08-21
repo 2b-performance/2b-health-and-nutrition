@@ -15,6 +15,24 @@ export function isStage(value: string): value is StageKey {
   return (STAGE_KEYS as string[]).includes(value);
 }
 
+// Etapas que representam um negócio fechado.
+export const CLOSED_STAGES: StageKey[] = ["GANHO", "PERDIDO"];
+
+export function isClosedStage(stage: string): boolean {
+  return (CLOSED_STAGES as string[]).includes(stage);
+}
+
+// Decide o closedAt ao mover para uma etapa:
+// - entrou numa etapa fechada -> mantém a data existente ou marca agora;
+// - voltou para etapa aberta   -> limpa a data.
+export function closedAtForStage(
+  stage: string,
+  currentClosedAt: Date | null,
+): Date | null {
+  if (isClosedStage(stage)) return currentClosedAt ?? new Date();
+  return null;
+}
+
 export function stageLabel(key: string): string {
   return STAGES.find((s) => s.key === key)?.label ?? key;
 }
@@ -25,4 +43,16 @@ export function formatBRL(cents: number): string {
     style: "currency",
     currency: "BRL",
   });
+}
+
+// Formato compacto para rótulos de gráfico: 4500000 -> "R$ 45k", 120000 -> "R$ 1,2k"
+export function formatBRLCompact(cents: number): string {
+  const reais = cents / 100;
+  if (reais >= 1000) {
+    const k = reais / 1000;
+    const s = (k >= 100 ? Math.round(k) : Number(k.toFixed(1)))
+      .toLocaleString("pt-BR");
+    return `R$ ${s}k`;
+  }
+  return `R$ ${Math.round(reais).toLocaleString("pt-BR")}`;
 }

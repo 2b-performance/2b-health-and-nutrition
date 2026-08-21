@@ -3,7 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
 import { handleError } from "@/lib/api";
-import { isStage } from "@/lib/stages";
+import { isStage, closedAtForStage } from "@/lib/stages";
 
 const updateSchema = z.object({
   title: z.string().trim().min(1).optional(),
@@ -26,12 +26,18 @@ export async function PUT(req: Request, { params }: Params) {
     }
     const existing = await prisma.deal.findFirst({
       where: { id: params.id, ownerId: user.id },
-      select: { id: true },
+      select: { id: true, stage: true, closedAt: true },
     });
     if (!existing) {
       return NextResponse.json({ error: "Negócio não encontrado" }, { status: 404 });
     }
     const d = parsed.data;
+
+    // Recalcula closedAt quando a etapa muda (fechou/reabriu o negócio).
+    const closedAt =
+      d.stage !== undefined && d.stage !== existing.stage
+        ? closedAtForStage(d.stage, existing.closedAt)
+        : undefined;
 
     let contactId: string | null | undefined = undefined;
     if (d.contactId !== undefined) {
@@ -57,6 +63,7 @@ export async function PUT(req: Request, { params }: Params) {
           ? { valueCents: Math.round(d.valueReais * 100) }
           : {}),
         ...(d.stage !== undefined ? { stage: d.stage } : {}),
+        ...(closedAt !== undefined ? { closedAt } : {}),
         ...(contactId !== undefined ? { contactId } : {}),
       },
       include: { contact: { select: { id: true, name: true } } },

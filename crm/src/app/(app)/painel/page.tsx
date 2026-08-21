@@ -1,21 +1,29 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
-import { STAGES, formatBRL } from "@/lib/stages";
+import { STAGES, formatBRL, formatBRLCompact } from "@/lib/stages";
+import { lastNMonths } from "@/lib/date";
 
 export const dynamic = "force-dynamic";
 
 const OPEN_STAGES = ["NOVO", "CONTATO", "PROPOSTA"];
 
-export default async function PainelPage() {
+export default async function PainelPage({
+  searchParams,
+}: {
+  searchParams: { meses?: string };
+}) {
   const user = await getCurrentUser();
   if (!user) return null;
 
+  // Período da série temporal: 6 (padrão) ou 12 meses.
+  const months = searchParams.meses === "12" ? 12 : 6;
   const now = new Date();
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
   const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+  const periodStart = new Date(now.getFullYear(), now.getMonth() - (months - 1), 1);
 
-  const [byStage, wonThisMonth, dueCount, contactsCount] = await Promise.all([
+  const [byStage, wonThisMonth, dueCount, contactsCount, wonByMonth] = await Promise.all([
     prisma.deal.groupBy({
       by: ["stage"],
       where: { ownerId: user.id },
@@ -23,7 +31,7 @@ export default async function PainelPage() {
       _count: { _all: true },
     }),
     prisma.deal.aggregate({
-      where: { ownerId: user.id, stage: "GANHO", updatedAt: { gte: startOfMonth } },
+      where: { ownerId: user.id, stage: "GANHO", closedAt: { gte: startOfMonth } },
       _sum: { valueCents: true },
       _count: { _all: true },
     }),
@@ -31,7 +39,33 @@ export default async function PainelPage() {
       where: { ownerId: user.id, done: false, dueDate: { not: null, lte: endOfToday } },
     }),
     prisma.contact.count({ where: { ownerId: user.id } }),
+    prisma.$queryRaw<{ month: string; value: bigint; count: bigint }[]>`
+      SELECT to_char(date_trunc('month', "closedAt"), 'YYYY-MM') AS month,
+             COALESCE(SUM("valueCents"), 0)::bigint AS value,
+             COUNT(*)::bigint AS count
+      FROM "Deal"
+      WHERE "ownerId" = ${user.id}
+        AND "stage" = 'GANHO'
+        AND "closedAt" IS NOT NULL
+        AND "closedAt" >= ${periodStart}
+      GROUP BY 1
+    `,
   ]);
+
+  // Preenche os meses do período (zerando os sem ganho) na ordem cronológica.
+  const wonMap = new Map(wonByMonth.map((r) => [r.month, r]));
+  const series = lastNMonths(months).map((m) => {
+    const row = wonMap.get(m.key);
+    return {
+      key: m.key,
+      label: m.label,
+      value: row ? Number(row.value) : 0,
+      count: row ? Number(row.count) : 0,
+    };
+  });
+  const seriesMax = Math.max(1, ...series.map((s) => s.value));
+  const seriesTotal = series.reduce((acc, s) => acc + s.value, 0);
+  const maxIdx = series.reduce((mi, s, i, arr) => (s.value > arr[mi].value ? i : mi), 0);
 
   // Mapa etapa -> { value, count }
   const stageMap = new Map(
@@ -144,6 +178,60 @@ export default async function PainelPage() {
               );
             })}
           </div>
+        )}
+      </div>
+
+      <div className="panel">
+        <div className="ts-head">
+          <div>
+            <h2>Ganhos por mês</h2>
+            <div className="panel-sub" style={{ marginBottom: 0 }}>
+              {formatBRL(seriesTotal)} ganhos nos últimos {months} meses.
+            </div>
+          </div>
+          <div className="ts-filter">
+            <Link href="/painel?meses=6" className={months === 6 ? "active" : ""}>
+              6 meses
+            </Link>
+            <Link href="/painel?meses=12" className={months === 12 ? "active" : ""}>
+              12 meses
+            </Link>
+          </div>
+        </div>
+
+        {seriesTotal === 0 ? (
+          <div className="muted" style={{ padding: "16px 0" }}>
+            Sem negócios ganhos no período. Mova um negócio para <strong>Ganho</strong>{" "}
+            no pipeline para começar a acompanhar o histórico.
+          </div>
+        ) : (
+          <>
+            <div className="ts-chart">
+              {series.map((s, i) => {
+                const h = s.value > 0 ? Math.max(3, (s.value / seriesMax) * 85) : 0;
+                return (
+                  <div
+                    className="ts-col"
+                    key={s.key}
+                    title={`${s.label}: ${formatBRL(s.value)} · ${s.count} ganho(s)`}
+                  >
+                    {i === maxIdx && s.value > 0 && (
+                      <div className="ts-val">{formatBRLCompact(s.value)}</div>
+                    )}
+                    <div
+                      className={`ts-bar${s.value === 0 ? " empty" : ""}`}
+                      style={{ height: s.value > 0 ? `${h}%` : "2px" }}
+                    />
+                  </div>
+                );
+              })}
+            </div>
+            <div className="ts-labels">
+              {series.map((s) => (
+                <span key={s.key}>{s.label}</span>
+              ))}
+            </div>
+          </>
         )}
       </div>
     </>

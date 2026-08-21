@@ -3,7 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
 import { handleError } from "@/lib/api";
-import { isStage } from "@/lib/stages";
+import { isStage, closedAtForStage } from "@/lib/stages";
 
 // Recebe a etapa de destino e a ordem final dos cards nela.
 // Move o card (se mudou de coluna) e renumera as posições.
@@ -24,21 +24,31 @@ export async function POST(req: Request) {
     }
     const { stage, orderedIds } = parsed.data;
 
-    // Garante que todos os cards pertencem ao usuário.
+    // Garante que todos os cards pertencem ao usuário (traz stage/closedAt atuais).
     const owned = await prisma.deal.findMany({
       where: { id: { in: orderedIds }, ownerId: user.id },
-      select: { id: true },
+      select: { id: true, stage: true, closedAt: true },
     });
-    const ownedSet = new Set(owned.map((d) => d.id));
-    const validIds = orderedIds.filter((id) => ownedSet.has(id));
+    const ownedMap = new Map(owned.map((d) => [d.id, d]));
+    const validIds = orderedIds.filter((id) => ownedMap.has(id));
 
     await prisma.$transaction(
-      validIds.map((id, index) =>
-        prisma.deal.update({
+      validIds.map((id, index) => {
+        const current = ownedMap.get(id)!;
+        // Só recalcula closedAt se a etapa mudou nesta operação.
+        const closedAt =
+          stage !== current.stage
+            ? closedAtForStage(stage, current.closedAt)
+            : undefined;
+        return prisma.deal.update({
           where: { id },
-          data: { stage, position: index },
-        }),
-      ),
+          data: {
+            stage,
+            position: index,
+            ...(closedAt !== undefined ? { closedAt } : {}),
+          },
+        });
+      }),
     );
 
     return NextResponse.json({ ok: true });

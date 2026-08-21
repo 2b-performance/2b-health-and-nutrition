@@ -3,7 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
 import { handleError } from "@/lib/api";
-import { isStage } from "@/lib/stages";
+import { isStage, closedAtForStage } from "@/lib/stages";
 
 const createSchema = z.object({
   title: z.string().trim().min(1, "Informe o título do negócio"),
@@ -65,6 +65,7 @@ export async function POST(req: Request) {
         valueCents: Math.round(d.valueReais * 100),
         stage: d.stage,
         position: (last?.position ?? -1) + 1,
+        closedAt: closedAtForStage(d.stage, null),
         contactId,
       },
       include: { contact: { select: { id: true, name: true } } },
