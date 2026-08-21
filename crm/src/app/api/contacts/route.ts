@@ -22,10 +22,10 @@ export async function GET(req: Request) {
         ...(q
           ? {
               OR: [
-                { name: { contains: q } },
-                { email: { contains: q } },
-                { company: { contains: q } },
-                { phone: { contains: q } },
+                { name: { contains: q, mode: "insensitive" } },
+                { email: { contains: q, mode: "insensitive" } },
+                { company: { contains: q, mode: "insensitive" } },
+                { phone: { contains: q, mode: "insensitive" } },
               ],
             }
           : {}),

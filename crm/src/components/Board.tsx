@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { STAGES, formatBRL, type StageKey } from "@/lib/stages";
+import { STAGES, formatBRL, isOpenStage, parseBRLInput, type StageKey } from "@/lib/stages";
 
 type Deal = {
   id: string;
@@ -39,17 +39,23 @@ export default function Board({
 
   async function onDrop(stage: StageKey) {
     const dragId = draggingId;
+    const beforeId = dropBeforeId;
     setDragOverStage(null);
     setDropBeforeId(null);
     setDraggingId(null);
     if (!dragId) return;
 
+    // Soltar no espaço vazio da própria coluna (sem card-alvo) não deve
+    // reordenar o card — só cross-coluna ou soltar sobre um card move.
+    const dragged = deals.find((d) => d.id === dragId);
+    if (dragged && dragged.stage === stage && !beforeId) return;
+
     const targetList = deals
       .filter((d) => d.stage === stage && d.id !== dragId)
       .sort((a, b) => a.position - b.position);
     let insertIndex = targetList.length;
-    if (dropBeforeId) {
-      const i = targetList.findIndex((d) => d.id === dropBeforeId);
+    if (beforeId) {
+      const i = targetList.findIndex((d) => d.id === beforeId);
       if (i >= 0) insertIndex = i;
     }
     const orderedIds = targetList.map((d) => d.id);
@@ -99,7 +105,12 @@ export default function Board({
           <h1>Pipeline</h1>
           <div className="muted">
             {deals.length} negócio{deals.length === 1 ? "" : "s"} ·{" "}
-            {formatBRL(deals.reduce((s, d) => s + d.valueCents, 0))} em aberto
+            {formatBRL(
+              deals
+                .filter((d) => isOpenStage(d.stage))
+                .reduce((s, d) => s + d.valueCents, 0),
+            )}{" "}
+            em aberto
           </div>
         </div>
         <button className="btn btn-primary" onClick={() => openNew("NOVO")}>
@@ -216,13 +227,13 @@ function DealModal({
   async function save(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    const valueReais = parseBRLInput(value);
+    if (valueReais === null) {
+      setError("Valor inválido. Use o formato 1.500,00");
+      return;
+    }
     setSaving(true);
-    const payload = {
-      title,
-      valueReais: value === "" ? 0 : Number(value.replace(",", ".")),
-      stage,
-      contactId: contactId || "",
-    };
+    const payload = { title, valueReais, stage, contactId: contactId || "" };
     try {
       const res = await fetch(
         isNew ? "/api/deals" : `/api/deals/${deal!.id}`,

@@ -17,20 +17,21 @@ export function isStage(value: string): value is StageKey {
 
 // Etapas que representam um negócio fechado.
 export const CLOSED_STAGES: StageKey[] = ["GANHO", "PERDIDO"];
+// Etapas de negócio em aberto (ainda no funil).
+export const OPEN_STAGES: StageKey[] = ["NOVO", "CONTATO", "PROPOSTA"];
 
 export function isClosedStage(stage: string): boolean {
   return (CLOSED_STAGES as string[]).includes(stage);
 }
+export function isOpenStage(stage: string): boolean {
+  return (OPEN_STAGES as string[]).includes(stage);
+}
 
-// Decide o closedAt ao mover para uma etapa:
-// - entrou numa etapa fechada -> mantém a data existente ou marca agora;
-// - voltou para etapa aberta   -> limpa a data.
-export function closedAtForStage(
-  stage: string,
-  currentClosedAt: Date | null,
-): Date | null {
-  if (isClosedStage(stage)) return currentClosedAt ?? new Date();
-  return null;
+// Decide o closedAt AO MUDAR de etapa (chamado apenas em transições reais):
+// - entrou numa etapa fechada -> marca o momento da mudança (fechou/re-fechou agora);
+// - voltou/segue em etapa aberta -> limpa a data.
+export function closedAtForStage(stage: string): Date | null {
+  return isClosedStage(stage) ? new Date() : null;
 }
 
 export function stageLabel(key: string): string {
@@ -43,6 +44,23 @@ export function formatBRL(cents: number): string {
     style: "currency",
     currency: "BRL",
   });
+}
+
+// Interpreta um valor digitado em Real e devolve o número em reais.
+// Aceita "45.000,00" (pt-BR), "45000,50", "1500.50" e "45000".
+// Retorna null quando o texto não é um número válido (para exibir erro).
+export function parseBRLInput(input: string): number | null {
+  let s = input.trim().replace(/[R$\s]/g, "");
+  if (s === "") return 0;
+  if (s.includes(",")) {
+    // vírgula = decimal; pontos = separador de milhar
+    s = s.replace(/\./g, "").replace(",", ".");
+  } else if (!/^\d+\.\d{1,2}$/.test(s)) {
+    // sem vírgula e não é ponto-decimal simples -> pontos são de milhar
+    s = s.replace(/\./g, "");
+  }
+  const n = Number(s);
+  return Number.isFinite(n) && n >= 0 ? n : null;
 }
 
 // Formato compacto para rótulos de gráfico:

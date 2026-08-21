@@ -26,7 +26,7 @@ export async function PUT(req: Request, { params }: Params) {
     }
     const existing = await prisma.deal.findFirst({
       where: { id: params.id, ownerId: user.id },
-      select: { id: true, stage: true, closedAt: true },
+      select: { id: true, stage: true },
     });
     if (!existing) {
       return NextResponse.json({ error: "Negócio não encontrado" }, { status: 404 });
@@ -36,7 +36,7 @@ export async function PUT(req: Request, { params }: Params) {
     // Recalcula closedAt quando a etapa muda (fechou/reabriu o negócio).
     const closedAt =
       d.stage !== undefined && d.stage !== existing.stage
-        ? closedAtForStage(d.stage, existing.closedAt)
+        ? closedAtForStage(d.stage)
         : undefined;
 
     let contactId: string | null | undefined = undefined;

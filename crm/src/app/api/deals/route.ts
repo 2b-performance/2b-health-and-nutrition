@@ -65,7 +65,7 @@ export async function POST(req: Request) {
         valueCents: Math.round(d.valueReais * 100),
         stage: d.stage,
         position: (last?.position ?? -1) + 1,
-        closedAt: closedAtForStage(d.stage, null),
+        closedAt: closedAtForStage(d.stage),
         contactId,
       },
       include: { contact: { select: { id: true, name: true } } },

@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { hashPassword, setSessionCookie } from "@/lib/auth";
+import { handleError } from "@/lib/api";
 
 const schema = z.object({
   name: z.string().trim().min(1, "Informe seu nome"),
@@ -21,19 +23,21 @@ export async function POST(req: Request) {
   const { name, email, password } = parsed.data;
   const emailLower = email.toLowerCase();
 
-  const existing = await prisma.user.findUnique({ where: { email: emailLower } });
-  if (existing) {
-    return NextResponse.json(
-      { error: "Já existe uma conta com este e-mail" },
-      { status: 409 },
-    );
+  try {
+    // Deixa a constraint @unique decidir: evita a corrida do check-then-create.
+    const user = await prisma.user.create({
+      data: { name, email: emailLower, passwordHash: await hashPassword(password) },
+      select: { id: true, email: true },
+    });
+    await setSessionCookie(user.id, user.email);
+    return NextResponse.json({ ok: true });
+  } catch (e) {
+    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
+      return NextResponse.json(
+        { error: "Já existe uma conta com este e-mail" },
+        { status: 409 },
+      );
+    }
+    return handleError(e);
   }
-
-  const user = await prisma.user.create({
-    data: { name, email: emailLower, passwordHash: await hashPassword(password) },
-    select: { id: true, email: true },
-  });
-
-  await setSessionCookie(user.id, user.email);
-  return NextResponse.json({ ok: true });
 }

@@ -24,10 +24,10 @@ export async function POST(req: Request) {
     }
     const { stage, orderedIds } = parsed.data;
 
-    // Garante que todos os cards pertencem ao usuário (traz stage/closedAt atuais).
+    // Garante que todos os cards pertencem ao usuário (traz a etapa atual).
     const owned = await prisma.deal.findMany({
       where: { id: { in: orderedIds }, ownerId: user.id },
-      select: { id: true, stage: true, closedAt: true },
+      select: { id: true, stage: true },
     });
     const ownedMap = new Map(owned.map((d) => [d.id, d]));
     const validIds = orderedIds.filter((id) => ownedMap.has(id));
@@ -37,9 +37,7 @@ export async function POST(req: Request) {
         const current = ownedMap.get(id)!;
         // Só recalcula closedAt se a etapa mudou nesta operação.
         const closedAt =
-          stage !== current.stage
-            ? closedAtForStage(stage, current.closedAt)
-            : undefined;
+          stage !== current.stage ? closedAtForStage(stage) : undefined;
         return prisma.deal.update({
           where: { id },
           data: {
