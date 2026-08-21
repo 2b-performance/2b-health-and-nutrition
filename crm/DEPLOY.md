@@ -17,6 +17,7 @@ não há passo de conversão. Em produção as migrations são aplicadas com
 |---|---|
 | `DATABASE_URL` | String de conexão do Postgres. |
 | `AUTH_SECRET` | Segredo do JWT de sessão. Gere com `openssl rand -hex 32`. |
+| `TZ` | Fuso do negócio (padrão `America/Sao_Paulo` na imagem). Alinha as datas do servidor (ex.: "tarefas de hoje") com o navegador do usuário. Na Vercel, defina `TZ` nas variáveis do projeto (o runtime é UTC por padrão). |
 
 Nunca versione os valores reais. Configure-os no painel do provedor.
 

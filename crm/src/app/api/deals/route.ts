@@ -7,7 +7,11 @@ import { isStage, closedAtForStage } from "@/lib/stages";
 
 const createSchema = z.object({
   title: z.string().trim().min(1, "Informe o título do negócio"),
-  valueReais: z.coerce.number().min(0).default(0),
+  valueReais: z.coerce
+    .number()
+    .min(0)
+    .max(20_000_000, "Valor acima do limite (R$ 20 milhões)")
+    .default(0),
   stage: z.string().refine(isStage, "Etapa inválida").default("NOVO"),
   contactId: z.string().optional().or(z.literal("")),
 });

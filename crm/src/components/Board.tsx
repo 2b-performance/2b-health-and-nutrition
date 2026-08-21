@@ -39,14 +39,15 @@ export default function Board({
 
   async function onDrop(stage: StageKey) {
     const dragId = draggingId;
-    const beforeId = dropBeforeId;
+    // Soltar sobre o próprio card não é um alvo — trata como "sem alvo".
+    const beforeId = dropBeforeId === dragId ? null : dropBeforeId;
     setDragOverStage(null);
     setDropBeforeId(null);
     setDraggingId(null);
     if (!dragId) return;
 
-    // Soltar no espaço vazio da própria coluna (sem card-alvo) não deve
-    // reordenar o card — só cross-coluna ou soltar sobre um card move.
+    // Soltar no espaço vazio da própria coluna (ou sobre si mesmo) não deve
+    // reordenar — só cross-coluna ou soltar sobre outro card move.
     const dragged = deals.find((d) => d.id === dragId);
     if (dragged && dragged.stage === stage && !beforeId) return;
 

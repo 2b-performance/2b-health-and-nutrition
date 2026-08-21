@@ -1,12 +1,10 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
-import { STAGES, formatBRL, formatBRLCompact } from "@/lib/stages";
+import { STAGES, OPEN_STAGES, formatBRL, formatBRLCompact } from "@/lib/stages";
 import { lastNMonths, monthKey } from "@/lib/date";
 
 export const dynamic = "force-dynamic";
-
-const OPEN_STAGES = ["NOVO", "CONTATO", "PROPOSTA"];
 
 export default async function PainelPage({
   searchParams,

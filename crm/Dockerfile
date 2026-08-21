@@ -23,7 +23,10 @@ RUN npx prisma generate && npx next build
 FROM node:22-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
-RUN apk add --no-cache openssl && \
+# Fuso do negócio (pt-BR) para que as datas do servidor (ex.: "tarefas de hoje")
+# batam com o navegador do usuário. Sobrescreva com -e TZ=... se necessário.
+ENV TZ=America/Sao_Paulo
+RUN apk add --no-cache openssl tzdata && \
     addgroup -g 1001 -S nodejs && adduser -S nextjs -u 1001
 
 # Servidor standalone + assets estáticos.

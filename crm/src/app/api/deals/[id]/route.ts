@@ -7,7 +7,11 @@ import { isStage, closedAtForStage } from "@/lib/stages";
 
 const updateSchema = z.object({
   title: z.string().trim().min(1).optional(),
-  valueReais: z.coerce.number().min(0).optional(),
+  valueReais: z.coerce
+    .number()
+    .min(0)
+    .max(20_000_000, "Valor acima do limite (R$ 20 milhões)")
+    .optional(),
   stage: z.string().refine(isStage, "Etapa inválida").optional(),
   contactId: z.string().optional().or(z.literal("")).or(z.null()),
 });
@@ -33,11 +37,19 @@ export async function PUT(req: Request, { params }: Params) {
     }
     const d = parsed.data;
 
-    // Recalcula closedAt quando a etapa muda (fechou/reabriu o negócio).
-    const closedAt =
-      d.stage !== undefined && d.stage !== existing.stage
-        ? closedAtForStage(d.stage)
-        : undefined;
+    // Ao mudar de etapa: recalcula closedAt e joga o card para o fim da
+    // coluna de destino, evitando colisão de position com os cards de lá.
+    const stageChanged = d.stage !== undefined && d.stage !== existing.stage;
+    const closedAt = stageChanged ? closedAtForStage(d.stage!) : undefined;
+    let position: number | undefined = undefined;
+    if (stageChanged) {
+      const last = await prisma.deal.findFirst({
+        where: { ownerId: user.id, stage: d.stage },
+        orderBy: { position: "desc" },
+        select: { position: true },
+      });
+      position = (last?.position ?? -1) + 1;
+    }
 
     let contactId: string | null | undefined = undefined;
     if (d.contactId !== undefined) {
@@ -63,6 +75,7 @@ export async function PUT(req: Request, { params }: Params) {
           ? { valueCents: Math.round(d.valueReais * 100) }
           : {}),
         ...(d.stage !== undefined ? { stage: d.stage } : {}),
+        ...(position !== undefined ? { position } : {}),
         ...(closedAt !== undefined ? { closedAt } : {}),
         ...(contactId !== undefined ? { contactId } : {}),
       },

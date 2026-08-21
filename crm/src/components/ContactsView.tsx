@@ -40,11 +40,13 @@ export default function ContactsView({
     setModalOpen(true);
   }
   function onSaved(c: Contact, isNew: boolean) {
-    setContacts((prev) =>
-      isNew
-        ? [...prev, c].sort((a, b) => a.name.localeCompare(b.name))
-        : prev.map((x) => (x.id === c.id ? { ...x, ...c } : x)),
-    );
+    setContacts((prev) => {
+      const next = isNew
+        ? [...prev, c]
+        : prev.map((x) => (x.id === c.id ? { ...x, ...c } : x));
+      // Reordena sempre (nome pode ter mudado numa edição).
+      return next.sort((a, b) => a.name.localeCompare(b.name));
+    });
     setModalOpen(false);
   }
   function onDeleted(id: string) {
