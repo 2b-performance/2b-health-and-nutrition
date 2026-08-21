@@ -463,3 +463,107 @@ table.list tbody tr:hover {
     padding: 18px;
   }
 }
+
+/* ---------- Dashboard / Painel ---------- */
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 14px;
+  margin-bottom: 22px;
+}
+.stat-tile {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  padding: 16px 18px;
+}
+.stat-label {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--text-muted);
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+.stat-value {
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+.stat-sub {
+  font-size: 12.5px;
+  color: var(--text-muted);
+  margin-top: 5px;
+}
+.stat-value.pos {
+  color: var(--success);
+}
+.stat-value.alert {
+  color: var(--danger);
+}
+
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  padding: 20px;
+  margin-bottom: 18px;
+}
+.panel h2 {
+  font-size: 15px;
+  margin-bottom: 4px;
+}
+.panel .panel-sub {
+  color: var(--text-muted);
+  font-size: 12.5px;
+  margin-bottom: 16px;
+}
+
+/* Funil horizontal — barra única por etapa, com rótulo direto */
+.funnel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.funnel-row {
+  display: grid;
+  grid-template-columns: 108px 1fr 150px;
+  align-items: center;
+  gap: 12px;
+}
+.funnel-name {
+  font-size: 13px;
+  font-weight: 600;
+}
+.funnel-track {
+  background: var(--surface-2);
+  border-radius: 5px;
+  height: 22px;
+  overflow: hidden;
+}
+.funnel-bar {
+  height: 100%;
+  border-radius: 4px;
+  background: var(--primary);
+  min-width: 3px;
+  transition: width 0.3s ease;
+}
+.funnel-bar.win {
+  background: var(--success);
+}
+.funnel-bar.loss {
+  background: var(--danger);
+}
+.funnel-meta {
+  font-size: 13px;
+  text-align: right;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+.funnel-meta .count {
+  color: var(--text-muted);
+  font-size: 12px;
+}

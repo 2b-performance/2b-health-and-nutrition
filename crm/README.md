@@ -14,6 +14,8 @@ App único em Next.js (React + rotas de API) sobre PostgreSQL via Prisma.
 
 ## Escopo
 
+- **Painel**: KPIs do funil (em aberto, ganhos no mês, taxa de conversão, ticket
+  médio, tarefas para hoje/atrasadas, contatos) + funil de valor por etapa.
 - **Contatos**: cadastro, busca, edição, exclusão e ficha com os negócios ligados.
 - **Pipeline**: funil Kanban com 5 etapas (Novo → Em contato → Proposta → Ganho / Perdido),
   arrastar-e-soltar entre colunas, valor total por etapa e no funil.
@@ -44,6 +46,7 @@ e `AUTH_SECRET` é o segredo da sessão. Veja `.env.example`. **Não** versione 
 src/
   app/
     (app)/                  # área autenticada (sidebar + telas)
+      painel/               # dashboard de métricas (KPIs + funil)
       pipeline/             # funil Kanban
       contatos/             # lista + ficha do contato
       tarefas/              # follow-ups com vencimento
@@ -66,6 +69,6 @@ limpa, seed popula os dados, e o app serve com cadastro/login e CRUD isolado por
 
 ## Próximos passos
 
-- **Dashboard** de métricas (funil, valor em aberto, ganhos no mês, conversão).
 - Papéis de usuário (admin/vendedor) e múltiplos workspaces.
 - Histórico/atividades no contato e importar/exportar contatos.
+- Séries temporais no painel (ganhos por mês) e filtro por período.

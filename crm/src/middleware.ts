@@ -27,10 +27,10 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // Já logado tentando abrir login/cadastro -> vai para o pipeline.
+  // Já logado tentando abrir login/cadastro -> vai para o painel.
   if (!isApi && isPublicPage && session) {
     const url = req.nextUrl.clone();
-    url.pathname = "/pipeline";
+    url.pathname = "/painel";
     return NextResponse.redirect(url);
   }
 

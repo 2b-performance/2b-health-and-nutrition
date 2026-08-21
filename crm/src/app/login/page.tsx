@@ -26,7 +26,7 @@ export default function LoginPage() {
         setError(data.error ?? "Falha ao entrar");
         return;
       }
-      router.push("/pipeline");
+      router.push("/painel");
       router.refresh();
     } catch {
       setError("Erro de conexão");

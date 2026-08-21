@@ -27,7 +27,7 @@ export default function RegisterPage() {
         setError(data.error ?? "Falha ao criar conta");
         return;
       }
-      router.push("/pipeline");
+      router.push("/painel");
       router.refresh();
     } catch {
       setError("Erro de conexão");
