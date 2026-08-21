@@ -45,9 +45,16 @@ export function formatBRL(cents: number): string {
   });
 }
 
-// Formato compacto para rótulos de gráfico: 4500000 -> "R$ 45k", 120000 -> "R$ 1,2k"
+// Formato compacto para rótulos de gráfico:
+// 120000 -> "R$ 1,2k" · 4500000 -> "R$ 45k" · 105000000 -> "R$ 1,05M"
 export function formatBRLCompact(cents: number): string {
   const reais = cents / 100;
+  if (reais >= 1_000_000) {
+    const m = reais / 1_000_000;
+    const s = (m >= 100 ? Math.round(m) : Number(m.toFixed(m >= 10 ? 1 : 2)))
+      .toLocaleString("pt-BR");
+    return `R$ ${s}M`;
+  }
   if (reais >= 1000) {
     const k = reais / 1000;
     const s = (k >= 100 ? Math.round(k) : Number(k.toFixed(1)))

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { STAGES, formatBRL, formatBRLCompact } from "@/lib/stages";
-import { lastNMonths } from "@/lib/date";
+import { lastNMonths, monthKey } from "@/lib/date";
 
 export const dynamic = "force-dynamic";
 
@@ -23,7 +23,7 @@ export default async function PainelPage({
   const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
   const periodStart = new Date(now.getFullYear(), now.getMonth() - (months - 1), 1);
 
-  const [byStage, wonThisMonth, dueCount, contactsCount, wonByMonth] = await Promise.all([
+  const [byStage, wonThisMonth, dueCount, contactsCount, wonDeals] = await Promise.all([
     prisma.deal.groupBy({
       by: ["stage"],
       where: { ownerId: user.id },
@@ -39,29 +39,26 @@ export default async function PainelPage({
       where: { ownerId: user.id, done: false, dueDate: { not: null, lte: endOfToday } },
     }),
     prisma.contact.count({ where: { ownerId: user.id } }),
-    prisma.$queryRaw<{ month: string; value: bigint; count: bigint }[]>`
-      SELECT to_char(date_trunc('month', "closedAt"), 'YYYY-MM') AS month,
-             COALESCE(SUM("valueCents"), 0)::bigint AS value,
-             COUNT(*)::bigint AS count
-      FROM "Deal"
-      WHERE "ownerId" = ${user.id}
-        AND "stage" = 'GANHO'
-        AND "closedAt" IS NOT NULL
-        AND "closedAt" >= ${periodStart}
-      GROUP BY 1
-    `,
+    prisma.deal.findMany({
+      where: { ownerId: user.id, stage: "GANHO", closedAt: { gte: periodStart } },
+      select: { closedAt: true, valueCents: true },
+    }),
   ]);
 
-  // Preenche os meses do período (zerando os sem ganho) na ordem cronológica.
-  const wonMap = new Map(wonByMonth.map((r) => [r.month, r]));
+  // Agrupa os ganhos por mês em JS, usando a MESMA chave (monthKey/horário local)
+  // do eixo — evita divergência entre o bucketing do banco e o dos rótulos.
+  const wonMap = new Map<string, { value: number; count: number }>();
+  for (const d of wonDeals) {
+    if (!d.closedAt) continue;
+    const k = monthKey(d.closedAt);
+    const cur = wonMap.get(k) ?? { value: 0, count: 0 };
+    cur.value += d.valueCents;
+    cur.count += 1;
+    wonMap.set(k, cur);
+  }
   const series = lastNMonths(months).map((m) => {
     const row = wonMap.get(m.key);
-    return {
-      key: m.key,
-      label: m.label,
-      value: row ? Number(row.value) : 0,
-      count: row ? Number(row.count) : 0,
-    };
+    return { key: m.key, label: m.label, value: row?.value ?? 0, count: row?.count ?? 0 };
   });
   const seriesMax = Math.max(1, ...series.map((s) => s.value));
   const seriesTotal = series.reduce((acc, s) => acc + s.value, 0);

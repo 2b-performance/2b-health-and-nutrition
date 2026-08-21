@@ -37,9 +37,20 @@ function startOfDay(d: Date): number {
 
 export type DueBucket = "atrasada" | "hoje" | "proxima" | "sem-data";
 
-// Chave de mês "YYYY-MM".
+// Abreviações de mês (pt-BR), índice 0 = janeiro.
+const MONTH_ABBR = [
+  "jan", "fev", "mar", "abr", "mai", "jun",
+  "jul", "ago", "set", "out", "nov", "dez",
+];
+
+// Chave de mês "YYYY-MM" no horário local (mesma base do bucketing e do eixo).
 export function monthKey(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+
+// Rótulo compacto "ago/25".
+export function monthLabel(d: Date): string {
+  return `${MONTH_ABBR[d.getMonth()]}/${String(d.getFullYear()).slice(-2)}`;
 }
 
 // Últimos N meses (incluindo o atual), do mais antigo ao mais recente.
@@ -49,10 +60,7 @@ export function lastNMonths(n: number): { key: string; label: string }[] {
   const now = new Date();
   for (let i = n - 1; i >= 0; i--) {
     const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    const label = d
-      .toLocaleDateString("pt-BR", { month: "short", year: "2-digit" })
-      .replace(".", "");
-    out.push({ key: monthKey(d), label });
+    out.push({ key: monthKey(d), label: monthLabel(d) });
   }
   return out;
 }
